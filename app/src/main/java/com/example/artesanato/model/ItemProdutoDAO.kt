@@ -5,7 +5,7 @@ import androidx.room.*
 @Dao
 interface ItemProdutoDAO {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun incluir(vararg itens: ItemProduto)
+    fun incluir(vararg itemProduto: ItemProduto)
 
     @Delete()
     fun excluir(vararg itemProduto: ItemProduto)

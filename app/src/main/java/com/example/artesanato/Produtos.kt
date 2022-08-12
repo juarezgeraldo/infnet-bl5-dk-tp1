@@ -14,7 +14,7 @@ import com.example.artesanato.model.ProdutoDAO
 
 class Produtos : Fragment() {
     private lateinit var produtoDAO: ProdutoDAO
-    private lateinit var listaDeIds : ArrayList<Int>
+    private lateinit var listaDeIds: ArrayList<Int>
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -37,13 +37,15 @@ class Produtos : Fragment() {
 
         val lstProdutos = view.findViewById<ListView>(R.id.lstProdutos)
 
-        btnSalvarProduto.setOnClickListener(){
-            if (txtNomeProduto.text.toString().isEmpty()){
-                Toast.makeText(null,"Informe o nome do produto.", Toast.LENGTH_LONG).show()
-            }else{
-                if (txtPrecoProduto.text.toString().isEmpty() || txtPrecoProduto.text.toString().toDouble().equals(0.0)){
-                    Toast.makeText(null,"Informe o preço do produto.", Toast.LENGTH_LONG).show()
-                }else{
+        btnSalvarProduto.setOnClickListener() {
+            if (txtNomeProduto.text.toString().isEmpty()) {
+                Toast.makeText(null, "Informe o nome do produto.", Toast.LENGTH_LONG).show()
+            } else {
+                if (txtPrecoProduto.text.toString().isEmpty() || txtPrecoProduto.text.toString()
+                        .toDouble().equals(0.0)
+                ) {
+                    Toast.makeText(null, "Informe o preço do produto.", Toast.LENGTH_LONG).show()
+                } else {
                     if (txtIdProduto.text.toString().isEmpty()) {
                         val produto = Produto(
                             null,
@@ -51,17 +53,15 @@ class Produtos : Fragment() {
                             txtPrecoProduto.text.toString().toDouble(),
                             chkProdutoProprio.isChecked
                         )
-                        produtoDAO.incluir(produto)
-                        Toast.makeText( this@Produtos.requireActivity(),"Inclusão realizada com sucesso.", Toast.LENGTH_LONG).show()
-                    }else{
+                        atualizarProduto(produto, "incluir")
+                    } else {
                         val produto = Produto(
                             txtIdProduto.text.toString().toInt(),
                             txtNomeProduto.text.toString(),
                             txtPrecoProduto.text.toString().toDouble(),
                             chkProdutoProprio.isChecked
                         )
-                        produtoDAO.alterar(produto)
-                        Toast.makeText( this@Produtos.requireActivity(),"Alteração realizada com sucesso.", Toast.LENGTH_LONG).show()
+                        atualizarProduto(produto, "alterar")
                     }
                     txtIdProduto.setText(null)
                     txtNomeProduto.setText(null)
@@ -74,7 +74,7 @@ class Produtos : Fragment() {
             }
         }
 
-        lstProdutos.onItemClickListener = object : AdapterView.OnItemClickListener{
+        lstProdutos.onItemClickListener = object : AdapterView.OnItemClickListener {
             override fun onItemClick(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
 
                 val id = listaDeIds.get(p2)
@@ -90,7 +90,7 @@ class Produtos : Fragment() {
             }
         }
 
-        lstProdutos.onItemLongClickListener = object : AdapterView.OnItemLongClickListener{
+        lstProdutos.onItemLongClickListener = object : AdapterView.OnItemLongClickListener {
             override fun onItemLongClick(
                 p0: AdapterView<*>?,
                 p1: View?,
@@ -98,13 +98,9 @@ class Produtos : Fragment() {
                 p3: Long
             ): Boolean {
                 val id = listaDeIds.get(p2)
-//                val produto = produtoDAO.obter(id)
+                val produto = produtoDAO.obter(id)
 
-                if (produtoDAO.excluir(id) > 0) {
-                    Toast.makeText( this@Produtos.requireActivity(),"Exclusão realizada com sucesso.", Toast.LENGTH_LONG).show()
-                }else{
-                    Toast.makeText(this@Produtos.requireActivity(),"Exclusão não pode ser realizada, pois há Itens de produtos.", Toast.LENGTH_LONG).show()
-                }
+                atualizarProduto(produto, "excluir")
 
                 txtIdProduto.setText(null)
                 txtNomeProduto.setText(null)
@@ -123,16 +119,67 @@ class Produtos : Fragment() {
         super.onResume()
         atualizaListaProdutos()
     }
-    private fun atualizaListaProdutos(){
+
+    private fun atualizarProduto(produto: Produto, operacao: String) {
+        Thread {
+            when (operacao) {
+                "incluir" -> {
+                    produtoDAO.incluir(produto)
+                    this@Produtos.requireActivity().runOnUiThread {
+                        Toast.makeText(
+                            this@Produtos.requireActivity(),
+                            "Inclusão realizada com sucesso.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                "alterar" -> {
+                    produtoDAO.alterar(produto)
+                    this@Produtos.requireActivity().runOnUiThread {
+                        Toast.makeText(
+                            this@Produtos.requireActivity(),
+                            "Alteração realizada com sucesso.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                "excluir" -> {
+                    if (produtoDAO.excluir(produto.id.toString().toInt()) > 0) {
+                        this@Produtos.requireActivity().runOnUiThread {
+                            Toast.makeText(
+                                this@Produtos.requireActivity(),
+                                "Exclusão realizada com sucesso.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        this@Produtos.requireActivity().runOnUiThread {
+                            Toast.makeText(
+                                this@Produtos.requireActivity(),
+                                "Exclusão não pode ser realizada, pois há Itens de produtos.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun atualizaListaProdutos() {
         val produtos = produtoDAO.listar()
         val nomesProduto = ArrayList<String>()
         listaDeIds = ArrayList()
-        for (produto in produtos){
+        for (produto in produtos) {
             nomesProduto.add(produto.nomeProduto)
             listaDeIds.add(produto.id!!)
         }
         val lstProdutos = this.requireActivity().findViewById<ListView>(R.id.lstProdutos)
-        val adapter = ArrayAdapter<String>(this.requireActivity(), android.R.layout.simple_list_item_1, nomesProduto)
+        val adapter = ArrayAdapter<String>(
+            this.requireActivity(),
+            android.R.layout.simple_list_item_1,
+            nomesProduto
+        )
         lstProdutos.adapter = adapter
     }
 }
